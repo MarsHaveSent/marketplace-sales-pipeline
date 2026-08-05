@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Poetry
+poetry.toml
+
+# Jupyter
+.ipynb_checkpoints/
+analysis/exports/*
+!analysis/exports/.gitkeep
+
+# Env / secrets
+.env
+infra/.env
+*.pem
+*.key
+
+# Docker
+infra/postgres-data/
+
+# Airflow runtime
+dags/__pycache__/
+infra/airflow/logs/
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+#Рабочие заметки
+Контекст_проекта.md
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.code-workspace
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
