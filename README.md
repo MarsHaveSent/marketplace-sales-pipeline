@@ -20,3 +20,7 @@ tests/               — pytest
 analysis/            — Jupyter-ноутбуки с исследованиями + экспорт в HTML/PDF
 docs/                — архитектура, инструкция по разворачиванию, заметки по API
 ```
+
+## Лицензия
+
+MIT, см. [LICENSE](LICENSE).
