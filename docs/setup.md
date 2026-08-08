@@ -33,3 +33,15 @@ ssh -i ~/.ssh/da_final_project root@<IP> 'bash -s' < infra/bootstrap-server.sh
 После первого прогона: проверить вход под `deploy` в отдельной сессии, и только потом закрывать root-сессию. Если апдейт затронул ядро — перезагрузить сервер (`test -f /var/run/reboot-required`) и после перезагрузки заново проверить `deploy`-доступ, `systemctl is-active docker`, `sudo ufw status`.
 
 Дальнейшая работа с сервером — только под `deploy`, root по SSH недоступен.
+
+## Postgres
+
+Репозиторий клонирован на сервер в `~/marketplace-sales-pipeline`. Реальные пароли — в `infra/.env` (не в git, только на сервере), по образцу `infra/.env.example`.
+
+```
+cd ~/marketplace-sales-pipeline/infra
+docker compose up -d
+docker compose ps
+```
+
+Порт 5432 проброшен наружу (`0.0.0.0:5432`) и подтверждён доступным снаружи сервера — группа безопасности Selectel `default` его не блокирует, отдельно настраивать не пришлось.
