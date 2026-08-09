@@ -45,3 +45,35 @@ docker compose ps
 ```
 
 Порт 5432 проброшен наружу (`0.0.0.0:5432`) и подтверждён доступным снаружи сервера — группа безопасности Selectel `default` его не блокирует, отдельно настраивать не пришлось.
+
+## Airflow
+
+Metadata DB — отдельная база `airflow` в том же контейнере Postgres (не второй контейнер). Init-скрипты Docker-образа Postgres срабатывают только на пустом volume, а наш уже был инициализирован под `sales` в Неделе 1, поэтому база `airflow` создана вручную один раз:
+
+```
+docker compose exec -T postgres psql -U sales_app -d sales -c "CREATE DATABASE airflow;"
+```
+
+Секреты (генерируются один раз при бутстрапе, в `infra/.env`, не в git):
+
+- `AIRFLOW_FERNET_KEY` — шифрует пароли/connections в metadata DB; менять после старта нельзя
+- `AIRFLOW_WEBSERVER_SECRET_KEY` — подпись сессий Flask
+- `AIRFLOW_ADMIN_PASSWORD` — пароль веб-пользователя `admin`
+
+Подъём:
+
+```
+docker compose build airflow-init
+docker compose up airflow-init          # миграция metadata DB + создание пользователя admin, разовый прогон
+docker compose up -d airflow-webserver airflow-scheduler
+```
+
+Веб-интерфейс слушает `127.0.0.1:8080` — сознательно не наружу (в отличие от Postgres и Metabase, доступ к Airflow UI не входит в сдаваемые по ТЗ доступы). Смотреть его можно через SSH-туннель:
+
+```
+ssh -i ~/.ssh/da_final_project -L 8080:localhost:8080 deploy@<IP>
+```
+
+и затем открыть `http://localhost:8080` в браузере на своей машине, пока сессия открыта. Логин — `admin`, пароль — значение `AIRFLOW_ADMIN_PASSWORD` из `infra/.env` на сервере.
+
+DAG'и и `scripts/` примонтированы как volumes (`../dags`, `../scripts`) — правки подхватываются без пересборки образа; пересборка (`docker compose build`) нужна только при изменении `requirements-airflow.txt` или `Dockerfile`.
