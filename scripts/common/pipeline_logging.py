@@ -3,10 +3,17 @@ from datetime import datetime, timezone
 from scripts.common import db
 
 
-def _log(context, status: str) -> None:
-    """Общий колбэк для on_success_callback/on_failure_callback на уровне DAG:
-    пишет одну строку в ops.pipeline_runs на весь прогон, независимо от того,
-    сколько тасок внутри DAG'а"""
+def log_pipeline_run(context) -> None:
+    """on_success_callback таска `end` (см. dags/sales_pipeline_dag.py).
+
+    Висит на `end`, а не на DAG-level on_success/on_failure_callback: DAG-level
+    колбэки в Airflow ненадёжны (github.com/apache/airflow/issues/18113) — на
+    практике не сработали ни разу при проверке. Таск-level колбэк выполняется
+    прямо в процессе воркера сразу после завершения таска и срабатывает стабильно.
+    `end` запускается с trigger_rule="all_done", поэтому этот колбэк вызывается
+    независимо от исхода extract_and_load_task — статус прогона определяется
+    здесь же, по состояниям соседних тасок.
+    """
     dag_run = context["dag_run"]
     source_date = dag_run.execution_date.date()
 
@@ -15,13 +22,13 @@ def _log(context, status: str) -> None:
         extract_ti.xcom_pull(task_ids="extract_and_load_task") if extract_ti else None
     )
 
-    error_message = None
-    if status == "failed":
-        failed_tasks = [
-            ti.task_id for ti in dag_run.get_task_instances() if ti.state == "failed"
-        ]
-        if failed_tasks:
-            error_message = f"failed tasks: {', '.join(failed_tasks)}"
+    failed_tasks = [
+        ti.task_id
+        for ti in dag_run.get_task_instances()
+        if ti.task_id != "end" and ti.state in ("failed", "upstream_failed")
+    ]
+    status = "failed" if failed_tasks else "success"
+    error_message = f"failed tasks: {', '.join(failed_tasks)}" if failed_tasks else None
 
     conn = db.get_connection()
     try:
@@ -38,11 +45,3 @@ def _log(context, status: str) -> None:
         )
     finally:
         conn.close()
-
-
-def log_success(context) -> None:
-    _log(context, status="success")
-
-
-def log_failure(context) -> None:
-    _log(context, status="failed")

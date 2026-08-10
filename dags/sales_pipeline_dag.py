@@ -4,7 +4,7 @@ import pendulum
 from airflow.decorators import dag, task
 from airflow.operators.empty import EmptyOperator
 
-from scripts.common.pipeline_logging import log_failure, log_success
+from scripts.common.pipeline_logging import log_pipeline_run
 from scripts.extract import run as extract_and_load
 
 
@@ -20,15 +20,22 @@ from scripts.extract import run as extract_and_load
         "retry_delay": timedelta(minutes=5),
     },
     tags=["sales"],
-    # Колбэки на уровне DAG, а не таски — срабатывают ровно один раз на весь прогон
-    # (пишут в ops.pipeline_runs см. pipeline_logging.py).
-    on_success_callback=log_success,
-    on_failure_callback=log_failure,
 )
 def sales_pipeline():
-    # start/end — фиксированные точки входа/выхода DAG'а.
+    # start/end — фиксированные точки входа/выхода DAG'а: стабильный task_id для
+    # внешних зависимостей (например, ExternalTaskSensor из другого DAG'а) и
+    # единое место логирования в ops.pipeline_runs, независимо от того, сколько
+    # реальных задач будет между ними (в Неделе 3 сюда добавятся dbt run/test).
+    # Логирование — на on_success_callback самого `end` (см. pipeline_logging.py),
+    # а не на DAG-level колбэках: те в Airflow ненадёжны (apache/airflow#18113),
+    # ни разу не сработали при проверке. trigger_rule="all_done" — end
+    # выполняется независимо от исхода extract_and_load_task.
     start = EmptyOperator(task_id="start")
-    end = EmptyOperator(task_id="end")
+    end = EmptyOperator(
+        task_id="end",
+        trigger_rule="all_done",
+        on_success_callback=log_pipeline_run,
+    )
 
     @task
     def extract_and_load_task(ds: str = None) -> int:
