@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 import psycopg2
 from psycopg2.extras import Json, execute_values
@@ -42,6 +42,54 @@ def ensure_schema(conn) -> None:
         )
         cur.execute(
             "CREATE INDEX IF NOT EXISTS idx_raw_sales_source_date ON raw.sales (source_date)"
+        )
+
+        cur.execute("CREATE SCHEMA IF NOT EXISTS ops")
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ops.pipeline_runs (
+                id BIGSERIAL PRIMARY KEY,
+                dag_run_id TEXT NOT NULL,
+                source_date DATE NOT NULL,
+                status TEXT NOT NULL,
+                rows_loaded INTEGER,
+                started_at TIMESTAMPTZ NOT NULL,
+                finished_at TIMESTAMPTZ NOT NULL,
+                error_message TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+            """
+        )
+    conn.commit()
+
+
+def log_pipeline_run(
+    conn,
+    *,
+    dag_run_id: str,
+    source_date: date,
+    status: str,
+    rows_loaded: int | None,
+    started_at: datetime,
+    finished_at: datetime,
+    error_message: str | None = None,
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO ops.pipeline_runs
+                (dag_run_id, source_date, status, rows_loaded, started_at, finished_at, error_message)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                dag_run_id,
+                source_date,
+                status,
+                rows_loaded,
+                started_at,
+                finished_at,
+                error_message,
+            ),
         )
     conn.commit()
 

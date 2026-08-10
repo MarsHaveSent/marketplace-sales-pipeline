@@ -4,6 +4,7 @@ import pendulum
 from airflow.decorators import dag, task
 from airflow.operators.empty import EmptyOperator
 
+from scripts.common.pipeline_logging import log_failure, log_success
 from scripts.extract import run as extract_and_load
 
 
@@ -19,13 +20,13 @@ from scripts.extract import run as extract_and_load
         "retry_delay": timedelta(minutes=5),
     },
     tags=["sales"],
+    # Колбэки на уровне DAG, а не таски — срабатывают ровно один раз на весь прогон
+    # (пишут в ops.pipeline_runs см. pipeline_logging.py).
+    on_success_callback=log_success,
+    on_failure_callback=log_failure,
 )
 def sales_pipeline():
-    # start/end — фиксированные точки входа/выхода DAG'а. Сами по себе ничего не
-    # делают, но дают стабильный task_id для внешних зависимостей (например,
-    # ExternalTaskSensor из другого DAG'а) и единое место, куда в следующих шагах
-    # повесим логирование в pipeline_runs и Telegram-алерт — независимо от того,
-    # сколько реальных задач будет между ними.
+    # start/end — фиксированные точки входа/выхода DAG'а.
     start = EmptyOperator(task_id="start")
     end = EmptyOperator(task_id="end")
 
