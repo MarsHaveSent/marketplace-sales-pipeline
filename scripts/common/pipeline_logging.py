@@ -4,16 +4,8 @@ from scripts.common import db
 
 
 def log_pipeline_run(context) -> None:
-    """on_success_callback таска `end` (см. dags/sales_pipeline_dag.py).
-
-    Висит на `end`, а не на DAG-level on_success/on_failure_callback: DAG-level
-    колбэки в Airflow ненадёжны (github.com/apache/airflow/issues/18113) — на
-    практике не сработали ни разу при проверке. Таск-level колбэк выполняется
-    прямо в процессе воркера сразу после завершения таска и срабатывает стабильно.
-    `end` запускается с trigger_rule="all_done", поэтому этот колбэк вызывается
-    независимо от исхода extract_and_load_task — статус прогона определяется
-    здесь же, по состояниям соседних тасок.
-    """
+    """on_success_callback таска `end`. Не DAG-level колбэк — те в Airflow
+    ненадёжны (apache/airflow#18113) не сработали ни разу при проверке."""
     dag_run = context["dag_run"]
     source_date = dag_run.execution_date.date()
 

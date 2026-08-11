@@ -95,9 +95,8 @@ def log_pipeline_run(
 
 
 def replace_day(conn, target_date: date, records: list[dict]) -> int:
-    """Перезаписывает данные за дату одной транзакцией: сначала удаляет
-    старые строки, потом вставляет новые. У записей API нет надёжного
-    бизнес-ключа для ON CONFLICT, а данные за день стабильны (see docs/api_notes.md)"""
+    """Удаляет старые строки за дату и вставляет новые одной транзакцией.
+    Надёжного бизнес-ключа для ON CONFLICT у записей нет (см. docs/api_notes.md)."""
     with conn.cursor() as cur:
         cur.execute("DELETE FROM raw.sales WHERE source_date = %s", (target_date,))
         if records:

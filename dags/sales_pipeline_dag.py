@@ -1,14 +1,19 @@
 from datetime import date, timedelta
 
 import pendulum
-from airflow.decorators import dag, task
+from airflow import DAG
 from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import PythonOperator
 
 from scripts.common.pipeline_logging import log_pipeline_run
 from scripts.extract import run as extract_and_load
 
 
-@dag(
+def extract_and_load_task(ds: str, **_context) -> int:
+    return extract_and_load(date.fromisoformat(ds))
+
+
+dag = DAG(
     dag_id="sales_pipeline",
     description="Ежедневный забор продаж за предыдущий день и загрузка в raw.sales",
     schedule="0 7 * * *",
@@ -21,27 +26,26 @@ from scripts.extract import run as extract_and_load
     },
     tags=["sales"],
 )
-def sales_pipeline():
-    # start/end — фиксированные точки входа/выхода DAG'а: стабильный task_id для
-    # внешних зависимостей (например, ExternalTaskSensor из другого DAG'а) и
-    # единое место логирования в ops.pipeline_runs, независимо от того, сколько
-    # реальных задач будет между ними (в Неделе 3 сюда добавятся dbt run/test).
-    # Логирование — на on_success_callback самого `end` (см. pipeline_logging.py),
-    # а не на DAG-level колбэках: те в Airflow ненадёжны (apache/airflow#18113),
-    # ни разу не сработали при проверке. trigger_rule="all_done" — end
-    # выполняется независимо от исхода extract_and_load_task.
-    start = EmptyOperator(task_id="start")
-    end = EmptyOperator(
-        task_id="end",
-        trigger_rule="all_done",
-        on_success_callback=log_pipeline_run,
-    )
 
-    @task
-    def extract_and_load_task(ds: str = None) -> int:
-        return extract_and_load(date.fromisoformat(ds))
+# start/end — стабильный task_id для внешних зависимостей (например,
+# ExternalTaskSensor) и общая точка логирования в ops.pipeline_runs
+# независимо от числа реальных тасок между ними.
+start = EmptyOperator(task_id="start", dag=dag)
 
-    start >> extract_and_load_task() >> end
+extract_task = PythonOperator(
+    task_id="extract_and_load_task",
+    python_callable=extract_and_load_task,
+    dag=dag,
+)
 
+# on_success_callback здесь, а не DAG-level: DAG-level колбэки в Airflow
+# ненадёжны (apache/airflow#18113), не сработали ни разу при проверке.
+# trigger_rule="all_done" — end выполняется независимо от исхода extract_task.
+end = EmptyOperator(
+    task_id="end",
+    trigger_rule="all_done",
+    on_success_callback=log_pipeline_run,
+    dag=dag,
+)
 
-sales_pipeline()
+start >> extract_task >> end
