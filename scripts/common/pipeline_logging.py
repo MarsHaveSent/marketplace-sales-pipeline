@@ -1,6 +1,9 @@
+import logging
 from datetime import datetime, timezone
 
-from scripts.common import db
+from scripts.common import db, telegram
+
+logger = logging.getLogger(__name__)
 
 
 def log_pipeline_run(context) -> None:
@@ -21,6 +24,14 @@ def log_pipeline_run(context) -> None:
     ]
     status = "failed" if failed_tasks else "success"
     error_message = f"failed tasks: {', '.join(failed_tasks)}" if failed_tasks else None
+
+    if status == "failed":
+        try:
+            telegram.send_alert(
+                f"sales_pipeline упал: {dag_run.run_id}, дата {source_date}, {error_message}"
+            )
+        except Exception:
+            logger.exception("не получилось отправить алерт в Telegram")
 
     conn = db.get_connection()
     try:
