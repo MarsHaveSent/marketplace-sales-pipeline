@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 
-from scripts.common import db, telegram
+from scripts.common import db, email_alert
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +27,12 @@ def log_pipeline_run(context) -> None:
 
     if status == "failed":
         try:
-            telegram.send_alert(
-                f"sales_pipeline упал: {dag_run.run_id}, дата {source_date}, {error_message}"
+            email_alert.send_alert(
+                subject="sales_pipeline упал",
+                message=f"run_id: {dag_run.run_id}\nдата: {source_date}\n{error_message}",
             )
         except Exception:
-            logger.exception("не получилось отправить алерт в Telegram")
+            logger.exception("не получилось отправить алерт на почту")
 
     conn = db.get_connection()
     try:

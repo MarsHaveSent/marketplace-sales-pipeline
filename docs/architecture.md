@@ -14,7 +14,7 @@ Raw-слой хранит ответ API «as is», без предположе�
 
 ## Оркестрация
 
-- **Airflow DAG** (`dags/sales_pipeline_dag.py`): `extract → load_raw → dbt run → dbt test → log_pipeline_run`, ежедневно в 07:00. Ошибки — в Telegram через `on_failure_callback`.
+- **Airflow DAG** (`dags/sales_pipeline_dag.py`): `extract → load_raw → dbt run → dbt test → log_pipeline_run`, ежедневно в 07:00. Про падения — письмо на почту (изначально планировался Telegram, но с этого хостинга API Telegram недоступен — заблокирован на уровне сети).
 - **dbt запускается через `BashOperator`** внутри Airflow-контейнера (`dbt run`/`dbt test` как shell-команда).
 - **Backfill** (`scripts/backfill.py`) — отдельный одноразовый скрипт для заполнения истории, запускается вручную, переиспользует общий код extract/load.
 - **`pipeline_runs`** — таблица с метриками каждого прогона (сколько строк, время выполнения, статус) — основа health-дашборда в DataLens.
