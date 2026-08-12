@@ -1,0 +1,53 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: sales
+        description: Сырые ответы API за день, JSONB как есть.
+        columns:
+          - name: id
+            tests:
+              - unique
+              - not_null
+          - name: source_date
+            tests:
+              - not_null
+
+models:
+  - name: stg_sales
+    description: payload raw.sales развёрнут в типизированные колонки, мусорные строки с пустым payload отфильтрованы.
+    columns:
+      - name: sale_id
+        tests:
+          - unique
+          - not_null
+      - name: source_date
+        description: Дата, под которой extract.py запросил и загрузил строку.
+        tests:
+          - not_null
+      - name: client_id
+        tests:
+          - not_null
+      - name: gender
+        tests:
+          - accepted_values:
+              values: ["M", "F"]
+      - name: purchase_date
+        description: Дата из payload API — не всегда совпадает с source_date, расхождения до нескольких недель.
+      - name: product_id
+        tests:
+          - not_null
+      - name: quantity
+        tests:
+          - not_null
+      - name: price_per_item
+        tests:
+          - not_null
+      - name: discount_per_item
+        tests:
+          - not_null
+      - name: total_price
+        tests:
+          - not_null

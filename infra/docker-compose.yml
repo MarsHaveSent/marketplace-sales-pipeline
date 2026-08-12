@@ -5,6 +5,9 @@ x-airflow-env: &airflow-env
   AIRFLOW__CORE__LOAD_EXAMPLES: "false"
   AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY}
   PYTHONPATH: /opt/airflow
+  DBT_PROFILES_DIR: /opt/airflow/dbt
+  DBT_TARGET_PATH: /tmp/dbt_target
+  DBT_LOG_PATH: /tmp/dbt_logs
   POSTGRES_HOST: postgres
   POSTGRES_PORT: "5432"
   POSTGRES_USER: ${POSTGRES_USER}
@@ -46,6 +49,7 @@ services:
     volumes:
       - ../dags:/opt/airflow/dags
       - ../scripts:/opt/airflow/scripts
+      - ../dbt:/opt/airflow/dbt
       - airflow_logs:/opt/airflow/logs
     entrypoint: ["/bin/bash", "-c"]
     command:
@@ -62,6 +66,7 @@ services:
     volumes:
       - ../dags:/opt/airflow/dags
       - ../scripts:/opt/airflow/scripts
+      - ../dbt:/opt/airflow/dbt
       - airflow_logs:/opt/airflow/logs
     ports:
       - "127.0.0.1:8080:8080"
@@ -77,6 +82,7 @@ services:
     volumes:
       - ../dags:/opt/airflow/dags
       - ../scripts:/opt/airflow/scripts
+      - ../dbt:/opt/airflow/dbt
       - airflow_logs:/opt/airflow/logs
     command: scheduler
     restart: unless-stopped
