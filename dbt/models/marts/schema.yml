@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: mart_daily_sales
+    description: Продажи по дням, один source_date = одна строка.
+    columns:
+      - name: source_date
+        tests:
+          - unique
+          - not_null
+      - name: sales_count
+        tests:
+          - not_null
+      - name: total_revenue
+        tests:
+          - not_null
+
+  - name: mart_product_performance
+    description: Продажи по товарам, один product_id = одна строка.
+    columns:
+      - name: product_id
+        tests:
+          - unique
+          - not_null
+      - name: sales_count
+        tests:
+          - not_null
+      - name: total_revenue
+        tests:
+          - not_null
+
+  - name: mart_customer_activity
+    description: Активность по клиентам, один client_id = одна строка. Без gender — у одного client_id встречаются оба значения, не годится как атрибут клиента.
+    columns:
+      - name: client_id
+        tests:
+          - unique
+          - not_null
+      - name: sales_count
+        tests:
+          - not_null
+      - name: total_revenue
+        tests:
+          - not_null
