@@ -77,3 +77,14 @@ ssh -i ~/.ssh/da_final_project -L 8080:localhost:8080 deploy@<IP>
 и затем открыть `http://localhost:8080` в браузере на своей машине, пока сессия открыта. Логин — `admin`, пароль — значение `AIRFLOW_ADMIN_PASSWORD` из `infra/.env` на сервере.
 
 DAG'и и `scripts/` примонтированы как volumes (`../dags`, `../scripts`) — правки подхватываются без пересборки образа; пересборка (`docker compose build`) нужна только при изменении `requirements-airflow.txt` или `Dockerfile`.
+
+## Metabase
+
+Своя БД `metabase` в том же контейнере Postgres, тем же способом, что и `airflow` (volume уже не пустой, init-скрипты не срабатывают):
+
+```
+docker compose exec -T postgres psql -U sales_app -d sales -c "CREATE DATABASE metabase;"
+docker compose up -d metabase
+```
+
+Слушает `3000` наружу — порт открыт в UFW и Security Groups с самого бутстрапа. При первом заходе на `http://<IP>:3000` — мастер настройки: аккаунт админа, потом добавить вторую БД-источник — `sales` (БД `metabase`  Metabase хранит только свои дашборды/настройки).
