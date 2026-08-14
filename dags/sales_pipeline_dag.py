@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 import pendulum
 from airflow import DAG
+from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
@@ -38,9 +39,21 @@ extract_task = PythonOperator(
     dag=dag,
 )
 
+dbt_run_task = BashOperator(
+    task_id="dbt_run",
+    bash_command="cd /opt/airflow/dbt && dbt run",
+    dag=dag,
+)
+
+dbt_test_task = BashOperator(
+    task_id="dbt_test",
+    bash_command="cd /opt/airflow/dbt && dbt test",
+    dag=dag,
+)
+
 # on_success_callback здесь, а не DAG-level: DAG-level колбэки в Airflow
 # ненадёжны (apache/airflow#18113), не сработали ни разу при проверке.
-# trigger_rule="all_done" — end выполняется независимо от исхода extract_task.
+# trigger_rule="all_done" — end выполняется независимо от исхода тасок выше по графу.
 end = EmptyOperator(
     task_id="end",
     trigger_rule="all_done",
@@ -48,4 +61,4 @@ end = EmptyOperator(
     dag=dag,
 )
 
-start >> extract_task >> end
+start >> extract_task >> dbt_run_task >> dbt_test_task >> end
