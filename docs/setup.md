@@ -88,3 +88,17 @@ docker compose up -d metabase
 ```
 
 Слушает `3000` наружу — порт открыт в UFW и Security Groups с самого бутстрапа. При первом заходе на `http://<IP>:3000` — мастер настройки: аккаунт админа, потом добавить вторую БД-источник — `sales` (БД `metabase`  Metabase хранит только свои дашборды/настройки).
+
+## DataLens
+
+Отдельный от `sales_app` read-only пользователь Postgres, только на чтение `ops.pipeline_runs` — DataLens снаружи Yandex Cloud, боевые креды туда отдавать незачем:
+
+```
+docker compose exec -T postgres psql -U sales_app -d sales \
+  -c "CREATE USER datalens_ro WITH PASSWORD '<пароль из infra/.env>';" \
+  -c "GRANT CONNECT ON DATABASE sales TO datalens_ro;" \
+  -c "GRANT USAGE ON SCHEMA ops TO datalens_ro;" \
+  -c "GRANT SELECT ON ops.pipeline_runs TO datalens_ro;"
+```
+
+Пароль — `DATALENS_RO_PASSWORD` в `infra/.env` на сервере (не в git). Подключение из DataLens — напрямую по внешнему IP сервера, порт `5432` (уже открыт, тот же порт, что и для прямого доступа к `sales`), база `sales`, пользователь `datalens_ro`.
