@@ -97,8 +97,20 @@ docker compose up -d metabase
 docker compose exec -T postgres psql -U sales_app -d sales \
   -c "CREATE USER datalens_ro WITH PASSWORD '<пароль из infra/.env>';" \
   -c "GRANT CONNECT ON DATABASE sales TO datalens_ro;" \
-  -c "GRANT USAGE ON SCHEMA ops TO datalens_ro;" \
-  -c "GRANT SELECT ON ops.pipeline_runs TO datalens_ro;"
+  -c "GRANT USAGE ON SCHEMA ops TO datalens_ro;"
 ```
 
 Пароль — `DATALENS_RO_PASSWORD` в `infra/.env` на сервере (не в git). Подключение из DataLens — напрямую по внешнему IP сервера, порт `5432` (уже открыт, тот же порт, что и для прямого доступа к `sales`), база `sales`, пользователь `datalens_ro`.
+
+`ops.pipeline_runs` вперемешку содержит и реальные прогоны DAG'а, и одноразовый бэкфилл (`dag_run_id like 'backfill__%'`) — у бэкфилла нет dbt-шага, длительность и объём несопоставимы с обычным прогоном, для health-дашборда это шум. `datalens_ro` читает не саму таблицу, а view поверх неё:
+
+```sql
+CREATE VIEW ops.pipeline_runs_health AS
+SELECT id, dag_run_id, source_date, status, rows_loaded, started_at, finished_at, error_message, created_at
+FROM ops.pipeline_runs
+WHERE dag_run_id NOT LIKE 'backfill__%';
+
+GRANT SELECT ON ops.pipeline_runs_health TO datalens_ro;
+```
+
+Доступа к самой `ops.pipeline_runs` у `datalens_ro` нет — только к отфильтрованной view, так что подключить в DataLens по ошибке грязный источник не получится.
