@@ -66,6 +66,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e
             cd ~/marketplace-sales-pipeline
             git pull --ff-only
             cd infra
