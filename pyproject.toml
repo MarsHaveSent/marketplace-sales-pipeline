@@ -18,6 +18,13 @@ pytest = "^8.0"
 requests-mock = "^1.12"
 freezegun = "^1.5"
 
+[tool.poetry.group.analysis.dependencies]
+pandas = "^2.2"
+sqlalchemy = "^2.0"
+jupyter = "^1.0"
+pygwalker = "^0.4"
+matplotlib = "^3.9"
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 
