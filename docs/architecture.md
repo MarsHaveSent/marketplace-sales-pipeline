@@ -10,11 +10,11 @@
 API (по одному дню) → extract.py → raw.* (JSONB как есть) → dbt staging → dbt marts → Metabase / DataLens / analysis-ноутбуки
 ```
 
-Raw-слой хранит ответ API «as is», без предположений о финальной схеме — на момент разведки API финальный формат ещё не был известен. Схема фиксируется на уровне dbt-моделей, а не таблицы приёма данных.
+Raw-слой хранит ответ API «as is». Схема фиксируется на уровне dbt-моделей.
 
 ## Оркестрация
 
-- **Airflow DAG** (`dags/sales_pipeline_dag.py`): `extract → load_raw → dbt run → dbt test → log_pipeline_run`, ежедневно в 07:00. Про падения — письмо на почту (изначально планировался Telegram, но с этого хостинга API Telegram недоступен — заблокирован на уровне сети).
+- **Airflow DAG** (`dags/sales_pipeline_dag.py`): `extract → load_raw → dbt run → dbt test → log_pipeline_run`, ежедневно в 07:00. Про падения — письмо на почту (изначально планировался Telegram, но с хостинга API Telegram недоступен).
 - **dbt запускается через `BashOperator`** внутри Airflow-контейнера (`dbt run`/`dbt test` как shell-команда).
 - **Backfill** (`scripts/backfill.py`) — отдельный одноразовый скрипт для заполнения истории, запускается вручную, переиспользует общий код extract/load.
 - **`pipeline_runs`** — таблица с метриками каждого прогона (сколько строк, время выполнения, статус) — основа health-дашборда в DataLens.
@@ -40,11 +40,11 @@ Firewall (UFW) открыт только на необходимые порты:
 
 ## Тестирование
 
-`pytest` + `requests-mock`/`responses` для мока ответов API + `freezegun` для детерминированных тестов даты. `pre-commit` (ruff/black) — проверка стиля до коммита.
+`pytest` + `requests-mock`/`responses` для мока ответов API + `freezegun` для тестов даты. `pre-commit` (ruff/black) — проверка стиля до коммита.
 
 ## Аналитическая часть
 
-Оба исследования оформлены как Jupyter-ноутбуки (код + графики + текстовые выводы в одном файле, рендерятся на GitHub), с экспортом в HTML/PDF в `analysis/exports/` как самодостаточный документ для сдачи:
+Оба исследования оформлены как Jupyter-ноутбуки (код + графики + текстовые выводы в одном файле, рендерятся на GitHub). 
 
 - `01_assortment_abc_xyz.ipynb` — ABC/XYZ-анализ ассортимента + эластичность спроса к скидкам
 - `02_customers_ltv.ipynb` — RFM-сегментация + когортный анализ retention
