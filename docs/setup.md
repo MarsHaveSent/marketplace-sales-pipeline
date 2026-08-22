@@ -114,3 +114,26 @@ GRANT SELECT ON ops.pipeline_runs_health TO datalens_ro;
 ```
 
 Доступа к самой `ops.pipeline_runs` у `datalens_ro` нет — только к отфильтрованной view, так что подключить в DataLens по ошибке грязный источник не получится.
+
+## Доступ для сдачи (read-only)
+
+Отдельные креды на сдачу, не рабочие — `sales_app` и SSH-ключ `deploy` наружу не отдаются.
+
+Postgres, read-only на `raw`/`staging`/`marts`/`ops` целиком (шире, чем у `datalens_ro` — нужно видеть весь пайплайн, не только health):
+
+```
+docker compose exec -T postgres psql -U sales_app -d sales \
+  -c "CREATE USER grader_ro WITH PASSWORD '<пароль из infra/.env>';" \
+  -c "GRANT CONNECT ON DATABASE sales TO grader_ro;" \
+  -c "GRANT USAGE ON SCHEMA raw, staging, marts, ops TO grader_ro;" \
+  -c "GRANT SELECT ON ALL TABLES IN SCHEMA raw TO grader_ro;" \
+  -c "GRANT SELECT ON ALL TABLES IN SCHEMA staging TO grader_ro;" \
+  -c "GRANT SELECT ON ALL TABLES IN SCHEMA marts TO grader_ro;" \
+  -c "GRANT SELECT ON ALL TABLES IN SCHEMA ops TO grader_ro;"
+```
+
+Пароль — `GRADER_RO_PASSWORD` в `infra/.env` на сервере.
+
+SSH — отдельная пара ключей (`da_final_project_grader`, не тот, что в GitHub Secrets для CD), публичный ключ добавлен вторым в `~/.ssh/authorized_keys` пользователя `deploy`. 
+
+Metabase — отдельный viewer-аккаунт (не админский), заводится через `Admin → People → Invite` в самом Metabase.
